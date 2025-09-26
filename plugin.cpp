@@ -2,30 +2,82 @@
 
 #include "RE/Skyrim.h"
 
-std::vector<RE::TESObjectREFR*> g_allActorRefs;
+std::vector<RE::TESActorBase*> g_allActorBases;
+struct ActorInfo {
+    RE::FormID refID;        // reference FormID (from Actor*)
+    std::string baseName;    // plugin-defined name (from TESNPC)
+    std::string handleName;  // runtime display name (from Actor)
+};
+std::vector<ActorInfo> g_allActorInfo;
 
-// Helper function to collect actor references from a BSTArray<ActorHandle>
-void CollectActorRefsFromArray(const RE::BSTArray<RE::ActorHandle>& handles, std::vector<RE::TESObjectREFR*>& out) {
-    for (const auto& handle : handles) {
-        auto actorPtr = handle.get();
-        if (actorPtr) {
-            out.push_back(static_cast<RE::TESObjectREFR*>(actorPtr.get()));
+static void CollectAllActorBaseForms() {
+    g_allActorBases.clear();
+
+    auto* dataHandler = RE::TESDataHandler::GetSingleton();
+    if (!dataHandler) return;
+
+    for (auto* npc : dataHandler->GetFormArray<RE::TESNPC>()) {
+        if (npc) {
+            g_allActorBases.push_back(npc);
         }
+    }
+
+    if (auto* console = RE::ConsoleLog::GetSingleton()) {
+        console->Print(fmt::format("Collected {} actor bases.", g_allActorBases.size()).c_str());
     }
 }
 
-void CollectAllActiveActorRefs() {
-    g_allActorRefs.clear();
+
+
+std::vector<RE::ActorHandle> GetAllActiveActorHandles() {
+    std::vector<RE::ActorHandle> result;
 
     auto* processLists = RE::ProcessLists::GetSingleton();
-    if (!processLists) return;
+    if (!processLists) return result;
 
-    // Collect actor references from each level
-    CollectActorRefsFromArray(processLists->highActorHandles, g_allActorRefs);
-    CollectActorRefsFromArray(processLists->lowActorHandles, g_allActorRefs);
-    CollectActorRefsFromArray(processLists->middleHighActorHandles, g_allActorRefs);
-    CollectActorRefsFromArray(processLists->middleLowActorHandles, g_allActorRefs);
+    auto collect = [&](const RE::BSTArray<RE::ActorHandle>& handles) {
+        for (auto& h : handles) {
+            if (h) result.push_back(h);
+        }
+    };
+
+    collect(processLists->highActorHandles);
+    collect(processLists->lowActorHandles);
+    collect(processLists->middleHighActorHandles);
+    collect(processLists->middleLowActorHandles);
+
+    return result;
 }
+
+
+std::vector<ActorInfo> BuildActorInfoList(const std::vector<RE::ActorHandle>& handles) {
+    std::vector<ActorInfo> result;
+
+
+    for (auto& handle : handles) {
+        if (auto actorPtr = handle.get()) {
+            if (auto* actor = actorPtr.get()) {
+                ActorInfo info{};
+                info.refID = actor->GetFormID();
+
+                // Base form (TESNPC)
+                if (auto* base = actor->GetActorBase()) {
+                    info.baseName = base->GetFullName();
+                } else {
+                    info.baseName = "<no base>";
+                }
+
+                // Runtime name
+                info.handleName = actor->GetDisplayFullName();
+
+                result.push_back(std::move(info));
+            }
+        }
+    }
+
+    return result;
+}
+
 
 SKSEPluginLoad(const SKSE::LoadInterface* skse) {
     SKSE::Init(skse);
@@ -33,29 +85,19 @@ SKSEPluginLoad(const SKSE::LoadInterface* skse) {
     SKSE::GetMessagingInterface()->RegisterListener([](SKSE::MessagingInterface::Message* message) {
         if (message->type == SKSE::MessagingInterface::kPostLoadGame ||
             message->type == SKSE::MessagingInterface::kNewGame) {
-            CollectAllActiveActorRefs();
 
-            auto* console = RE::ConsoleLog::GetSingleton();
-            console->Print("Collected all active actor references.");
-
-            // Print first 100 actors' info
-            const size_t maxActors = std::min(static_cast<size_t>(100), g_allActorRefs.size());
-            for (size_t i = 0; i < maxActors; ++i) {
-                auto* actorRef = g_allActorRefs[i];
-                if (actorRef) {
-                    // Get base actor to access name
-                    auto* baseActor = actorRef->As<RE::Actor>();
-                    if (baseActor) {
-                        const auto name = baseActor->GetDisplayFullName();
-                        const auto refID = actorRef->GetFormID();
-                        console->Print(fmt::format("Actor {}: {} (0x{:08X})", i, name, refID).c_str());
-                    }
+            CollectAllActorBaseForms();
+            g_allActorInfo = BuildActorInfoList(GetAllActiveActorHandles());
+            for (int i = 0; i < g_allActorInfo.size(); i++) {
+                auto& info = g_allActorInfo[i];
+                if (auto* console = RE::ConsoleLog::GetSingleton()) {
+                    if (info.baseName != info.handleName)
+                        console->Print(fmt::format("[{}] RefID: {:08X}, Base: {}, Name: {} <-- MISMATCH", i, info.refID, info.baseName, info.handleName).c_str());
                 }
             }
-
-            console->Print(fmt::format("Total actors found: {}", g_allActorRefs.size()).c_str());
         }
     });
 
     return true;
 }
+
