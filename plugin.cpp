@@ -1,4 +1,7 @@
 #include <vector>
+#include <rapidfuzz/fuzz.hpp>
+#include <string>
+#include <optional>
 
 #include "RE/Skyrim.h"
 
@@ -6,11 +9,16 @@ std::vector<RE::TESActorBase*> g_allActorBases;
 struct ActorInfo {
     RE::FormID refID;        // reference FormID (from Actor*)
     std::string baseName;    // plugin-defined name (from TESNPC)
+    std::string baseNameNorm;  // normalized base name (for searching)
     std::string handleName;  // runtime display name (from Actor)
+    std::string handleNameNorm;  // normalized handle name (for searching)
 };
 std::vector<ActorInfo> g_allActorInfo;
 
+
+
 static void CollectAllActorBaseForms() {
+    if (g_allActorBases.size() > 0) return;  // already collected
     g_allActorBases.clear();
 
     auto* dataHandler = RE::TESDataHandler::GetSingleton();
@@ -29,7 +37,7 @@ static void CollectAllActorBaseForms() {
 
 
 
-std::vector<RE::ActorHandle> GetAllActiveActorHandles() {
+std::vector<RE::ActorHandle> GetAllActiveActorHandles(bool nearbyOnly) {
     std::vector<RE::ActorHandle> result;
 
     auto* processLists = RE::ProcessLists::GetSingleton();
@@ -42,10 +50,11 @@ std::vector<RE::ActorHandle> GetAllActiveActorHandles() {
     };
 
     collect(processLists->highActorHandles);
-    collect(processLists->lowActorHandles);
     collect(processLists->middleHighActorHandles);
-    collect(processLists->middleLowActorHandles);
-
+    if (!nearbyOnly) {
+        collect(processLists->lowActorHandles);
+        collect(processLists->middleLowActorHandles);
+    }
     return result;
 }
 
@@ -75,29 +84,78 @@ std::vector<ActorInfo> BuildActorInfoList(const std::vector<RE::ActorHandle>& ha
         }
     }
 
+    if (auto* console = RE::ConsoleLog::GetSingleton()) {
+        console->Print(fmt::format("Built {} actor list.", result.size()).c_str());
+    }
+
     return result;
+}
+
+
+RE::FormID bk56_SearchActorFuzzy(RE::StaticFunctionTag*, RE::BSFixedString a_name, bool nearbyOnly, float a_weightmin) {
+    auto console = RE::ConsoleLog::GetSingleton();
+    console->Print("[bk56] Starting fuzzy search for: %s", a_name.c_str());
+    console->Print("[bk56] NearbyOnly: %s, WeightMin: %.2f", nearbyOnly ? "true" : "false", a_weightmin);
+
+    g_allActorInfo = BuildActorInfoList(GetAllActiveActorHandles(nearbyOnly));
+    console->Print("[bk56] Total actors considered: %zu", g_allActorInfo.size());
+
+    double bestScore = 0.0;
+    std::string query = a_name.c_str();
+    std::optional<RE::FormID> bestRefID;
+
+    for (const auto& actor : g_allActorInfo) {
+        double scoreBase = rapidfuzz::fuzz::WRatio(query, actor.baseName);
+        double scoreHandle = rapidfuzz::fuzz::WRatio(query, actor.handleName);
+        double chosenScore = std::max(scoreBase, scoreHandle);
+
+        if (chosenScore < a_weightmin) {
+       //     console->Print("[bk56] Skipping actor (score below threshold)");
+            continue;
+        }
+
+        if (chosenScore > bestScore) {
+            bestScore = chosenScore;
+            bestRefID = actor.refID;
+            console->Print("[bk56] New Actor Found: Base %s | Handle %s |Base: %.2f | Handle: %.2f | Chosen: %.2f",
+                           actor.baseName.c_str(), actor.handleName.c_str(), scoreBase, scoreHandle, chosenScore);
+        }
+    }
+
+    if (bestRefID) {
+        console->Print("[bk56] Final match: FormID %08X with score %.2f", bestRefID.value(), bestScore);
+    } else {
+        console->Print("[bk56] No match found above threshold");
+    }
+
+    return bestRefID.value_or(0u);
+}
+
+bool RegisterFuncs(RE::BSScript::IVirtualMachine* vm) {
+    vm->RegisterFunction("bk56_SearchActorFuzzy", "bk56_SearchActorFuzzy", bk56_SearchActorFuzzy);
+    return true;
 }
 
 
 SKSEPluginLoad(const SKSE::LoadInterface* skse) {
     SKSE::Init(skse);
-
+        
+    //Etc return stuff here
     SKSE::GetMessagingInterface()->RegisterListener([](SKSE::MessagingInterface::Message* message) {
         if (message->type == SKSE::MessagingInterface::kPostLoadGame ||
             message->type == SKSE::MessagingInterface::kNewGame) {
+            auto papyrus = SKSE::GetPapyrusInterface();
+
+            auto* console = RE::ConsoleLog::GetSingleton();
+            console->Print("[bk56] RegisterFuncs called");
+            papyrus->Register(RegisterFuncs);  // This must succeed
+            console->Print("[bk56] Registered bk56_SearchActorFuzzy");
 
             CollectAllActorBaseForms();
-            g_allActorInfo = BuildActorInfoList(GetAllActiveActorHandles());
-            for (int i = 0; i < g_allActorInfo.size(); i++) {
-                auto& info = g_allActorInfo[i];
-                if (auto* console = RE::ConsoleLog::GetSingleton()) {
-                    if (info.baseName != info.handleName)
-                        console->Print(fmt::format("[{}] RefID: {:08X}, Base: {}, Name: {} <-- MISMATCH", i, info.refID, info.baseName, info.handleName).c_str());
-                }
-            }
+
+            bk56_SearchActorFuzzy(nullptr, "Test", false, 0.0f);  // Test call to verify functionality
         }
     });
 
     return true;
 }
-
