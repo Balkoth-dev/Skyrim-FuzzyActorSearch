@@ -6,7 +6,7 @@ A native SKSE plugin that adds a Papyrus-accessible function for fuzzy name-base
 
 ## Function Overview
 
-```papyrus
+papyrus
 Int bk56_SearchActorFuzzy(String actorName, Bool nearbyOnly, Bool handledOnly, Float WeightMin)
 
 Returns the FormID of an Actor whose name closely matches the input string. Supports fuzzy matching and optional filters for proximity and engine-handled status.
