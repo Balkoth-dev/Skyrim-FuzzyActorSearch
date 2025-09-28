@@ -64,7 +64,7 @@ static void CollectAllActorBaseForms() {
 
     if (auto* console = RE::ConsoleLog::GetSingleton()) {
         std::string msg = fmt::format("Collected {} actor bases.", g_allActorBases.size());
-        console->Print(msg.c_str());
+        //console->Print(msg.c_str());
     }
 }
 
@@ -106,7 +106,7 @@ std::vector<SimpleActorInfo> GetAllActiveActorsSimple(bool nearbyOnly) {
         collect(processLists->lowActorHandles);
     }
 
-    console->Print(fmt::format("Collected {} active actors.", result.size()).c_str());
+    //console->Print(fmt::format("Collected {} active actors.", result.size()).c_str());
 
     return result;
 }
@@ -164,16 +164,16 @@ std::vector<ActorInfo> BuildActorInfoList(const std::vector<SimpleActorInfo>& ha
      //  if (info.finalScore >= 100.0) break;  // stop building when perfect match found
     }
 
-        console->Print(fmt::format("Built {} actor list.", result.size()).c_str());
+        //console->Print(fmt::format("Built {} actor list.", result.size()).c_str());
 
     return result;
 }
 
 RE::FormID bk56_SearchActorFuzzy(RE::StaticFunctionTag*, RE::BSFixedString a_name, bool nearbyOnly, bool handledOnly,
                                  float a_weightmin = 50.0) {
-    auto console = RE::ConsoleLog::GetSingleton();
-    console->Print("[bk56] Starting fuzzy search for: %s", a_name.c_str());
-    console->Print("[bk56] NearbyOnly: %s, HandledOnly: %s, WeightMin: %.2f", nearbyOnly ? "true" : "false",
+    //auto console = RE::ConsoleLog::GetSingleton();
+    //console->Print("[bk56] Starting fuzzy search for: %s", a_name.c_str());
+    //console->Print("[bk56] NearbyOnly: %s, HandledOnly: %s, WeightMin: %.2f", nearbyOnly ? "true" : "false",
                    handledOnly ? "true" : "false", a_weightmin);
 
     QueryTypes q;
@@ -185,7 +185,7 @@ RE::FormID bk56_SearchActorFuzzy(RE::StaticFunctionTag*, RE::BSFixedString a_nam
     auto handles = GetAllActiveActorsSimple(nearbyOnly);
     bool handledFilter = handledOnly || nearbyOnly;
     g_allActorInfo = BuildActorInfoList(handles, q, handledFilter, a_weightmin);
-    console->Print("[bk56] Total actors considered: %zu", g_allActorInfo.size());
+    ////console->Print("[bk56] Total actors considered: %zu", g_allActorInfo.size());
 
     std::optional<RE::FormID> bestRefID;
 
@@ -201,12 +201,12 @@ RE::FormID bk56_SearchActorFuzzy(RE::StaticFunctionTag*, RE::BSFixedString a_nam
         ActorInfo& best = g_allActorInfo.front();
         if (best.finalScore >= a_weightmin) {
             bestRefID = best.refID;
-            console->Print("[bk56] Final match: Base: %s Handle: %s with FormID %08X with score %.2f", 
+            //console->Print("[bk56] Final match: Base: %s Handle: %s with FormID %08X with score %.2f", 
                             best.baseName.c_str(), 
                             best.handleName.c_str(), 
                             bestRefID.value_or(0u), best.finalScore);
         } else {
-            console->Print("[bk56] No match found above threshold");
+            //console->Print("[bk56] No match found above threshold");
         }
     }
 
@@ -229,9 +229,9 @@ SKSEPluginLoad(const SKSE::LoadInterface* skse) {
             auto papyrus = SKSE::GetPapyrusInterface();
 
             auto* console = RE::ConsoleLog::GetSingleton();
-            console->Print("[bk56] RegisterFuncs called");
+            ////console->Print("[bk56] RegisterFuncs called");
             papyrus->Register(RegisterFuncs);  // This must succeed
-            console->Print("[bk56] Registered bk56_SearchActorFuzzy");
+           // //console->Print("[bk56] Registered bk56_SearchActorFuzzy");
 
             CollectAllActorBaseForms();
 
