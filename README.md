@@ -38,13 +38,13 @@ Tune WeightMin based on mod interference or name overrides.
 Use Game.GetForm(FormID) and cast to Actor to retrieve the NPC.
 
 # Example Usage
-
+```
 Int resultFormID = bk56_SearchActorFuzzy("Balgruuf", false, true, 70.0)
 If resultFormID != 0
     Actor matched = Game.GetForm(resultFormID) as Actor
     Debug.Trace("Found: " + matched.GetDisplayName())
 EndIf
-
+```
 # Tips and Considerations
 
 Always check for nonzero return before casting.
