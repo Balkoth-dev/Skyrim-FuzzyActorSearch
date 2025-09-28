@@ -69,7 +69,7 @@ static void CollectAllActorBaseForms() {
 }
 
 std::vector<SimpleActorInfo> GetAllActiveActorsSimple(bool nearbyOnly) {
-    auto* console = RE::ConsoleLog::GetSingleton();
+    //auto* console = RE::ConsoleLog::GetSingleton();
     std::vector<SimpleActorInfo> result;
     auto* processLists = RE::ProcessLists::GetSingleton();
     if (!processLists) return result;
@@ -113,7 +113,7 @@ std::vector<SimpleActorInfo> GetAllActiveActorsSimple(bool nearbyOnly) {
 
 std::vector<ActorInfo> BuildActorInfoList(const std::vector<SimpleActorInfo>& handles, QueryTypes query,
                                           bool handledFilter = false, float a_Weightmin = 50.0) {
-    auto* console = RE::ConsoleLog::GetSingleton();
+    //auto* console = RE::ConsoleLog::GetSingleton();
 
     std::vector<ActorInfo> result;
     result.reserve(g_allActorBases.size());
@@ -174,7 +174,7 @@ RE::FormID bk56_SearchActorFuzzy(RE::StaticFunctionTag*, RE::BSFixedString a_nam
     //auto console = RE::ConsoleLog::GetSingleton();
     //console->Print("[bk56] Starting fuzzy search for: %s", a_name.c_str());
     //console->Print("[bk56] NearbyOnly: %s, HandledOnly: %s, WeightMin: %.2f", nearbyOnly ? "true" : "false",
-                   handledOnly ? "true" : "false", a_weightmin);
+    //               handledOnly ? "true" : "false", a_weightmin);
 
     QueryTypes q;
 
@@ -202,9 +202,9 @@ RE::FormID bk56_SearchActorFuzzy(RE::StaticFunctionTag*, RE::BSFixedString a_nam
         if (best.finalScore >= a_weightmin) {
             bestRefID = best.refID;
             //console->Print("[bk56] Final match: Base: %s Handle: %s with FormID %08X with score %.2f", 
-                            best.baseName.c_str(), 
-                            best.handleName.c_str(), 
-                            bestRefID.value_or(0u), best.finalScore);
+            //                best.baseName.c_str(), 
+            //                best.handleName.c_str(), 
+            //                bestRefID.value_or(0u), best.finalScore);
         } else {
             //console->Print("[bk56] No match found above threshold");
         }
@@ -228,7 +228,7 @@ SKSEPluginLoad(const SKSE::LoadInterface* skse) {
             message->type == SKSE::MessagingInterface::kNewGame) {
             auto papyrus = SKSE::GetPapyrusInterface();
 
-            auto* console = RE::ConsoleLog::GetSingleton();
+            //auto* console = RE::ConsoleLog::GetSingleton();
             ////console->Print("[bk56] RegisterFuncs called");
             papyrus->Register(RegisterFuncs);  // This must succeed
            // //console->Print("[bk56] Registered bk56_SearchActorFuzzy");
