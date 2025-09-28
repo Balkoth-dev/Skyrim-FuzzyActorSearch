@@ -39,13 +39,15 @@ endif()
 
 # Setup your SKSE plugin as an SKSE plugin!
 find_package(CommonLibSSE CONFIG REQUIRED)
-add_commonlibsse_plugin(${PROJECT_NAME} SOURCES plugin.cpp) # <--- specifies plugin.cpp
+add_commonlibsse_plugin(${PROJECT_NAME} SOURCES plugin.cpp Helpers/StringHelpers.cpp) # <--- specifies plugin.cpp
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23) # <--- use C++23 standard
 target_precompile_headers(${PROJECT_NAME} PRIVATE PCH.h) # <--- PCH.h is required!
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Helpers) # <--- include Helpers folder
 
 # Link fmt to your plugin
 find_package(fmt CONFIG REQUIRED)
-target_link_libraries(${PROJECT_NAME} PRIVATE fmt::fmt)
+find_package(rapidfuzz CONFIG REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE fmt::fmt rapidfuzz::rapidfuzz)
 
 
 # When your SKSE .dll is compiled, this will automatically copy the .dll into your mods folder.
