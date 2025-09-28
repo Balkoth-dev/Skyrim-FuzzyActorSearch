@@ -63,8 +63,6 @@ Version: 1.0.0
 
 License: MIT
 
-Attribution: Please credit bk56 if used in public modifications.
-
 # Credits
 
 RapidFuzz: Used for fuzzy string matching. Licensed under MIT.
