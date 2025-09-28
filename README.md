@@ -17,7 +17,7 @@ actorName: Name to search for (e.g., "Sven", "Ysolda", "Elisif The Fair").
 
 nearbyOnly: If true, restricts search to high-process actors near the player.
 
-handledOnly: If true, only considers actors currently handled by the engine.
+handledOnly: If true, only considers actors currently handled by the engine. Leave this to true 99% of the time.
 
 WeightMin: Minimum similarity weight for a match (higher = stricter).
 
